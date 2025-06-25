@@ -2,10 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+
 require('dotenv').config();
 
 const twitterRoutes = require('./routes/twitter');
+const agentRoutes = require('./routes/agent');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
@@ -15,12 +16,7 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 app.use(cors());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// Rate limiting removed for unlimited requests
 
 // Logging
 app.use(morgan('combined'));
@@ -31,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/twitter', twitterRoutes);
+app.use('/api/agent', agentRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
