@@ -1,6 +1,7 @@
 const { ChatOpenAI } = require("@langchain/openai");
 const { initializeAgentExecutorWithOptions } = require("langchain/agents");
 const TwitterRepliesTool = require('../tools/twitterTool');
+const FeatureRequestTool = require('../tools/featureRequestTool');
 
 class TwitterAgent {
   constructor() {
@@ -18,14 +19,15 @@ class TwitterAgent {
     try {
       // Initialize OpenAI model
       this.model = new ChatOpenAI({
-        modelName: "gpt-3.5-turbo",
-        temperature: 0.7,
+        modelName: "gpt-4",
+        temperature: 0,
         openAIApiKey: process.env.OPENAI_API_KEY,
       });
 
       // Initialize tools
       this.tools = [
-        new TwitterRepliesTool()
+        new TwitterRepliesTool(),
+        new FeatureRequestTool()
       ];
 
       // Create agent executor with tools
@@ -52,34 +54,53 @@ class TwitterAgent {
    * Get system prompt for the agent
    */
   getSystemPrompt() {
-    return `You are a helpful Twitter analysis assistant. Your main capability is to fetch and analyze replies to Twitter/X posts.
+    return `You are a helpful Twitter analysis assistant with feature request tracking capabilities.
 
-**Your capabilities:**
+**Your main capabilities:**
 - Fetch replies/comments for any Twitter or X post URL
 - Analyze sentiment and engagement of replies
 - Provide insights about the conversation
+- **AUTOMATICALLY TRACK FEATURE REQUESTS** mentioned in replies
 - Identify trending topics in replies
 - Summarize key points from the discussion
 
+**CRITICAL: Feature Request Detection & Tracking:**
+When you analyze Twitter replies and find feature requests (like "dark mode", "responsive design", "notifications", etc.), you MUST:
+
+1. First use twitter_replies_fetcher to get the replies
+2. Analyze the replies for feature requests
+3. **IMMEDIATELY use feature_request_tracker tool** to save any feature requests found
+4. Then provide your response to the user
+
 **How to use your tools:**
-- When users provide a Twitter/X URL or ask about replies to a tweet, use the twitter_replies_fetcher tool
-- Always provide clear summaries and insights
-- Format your responses in a user-friendly way with emojis and clear structure
+1. **twitter_replies_fetcher**: Get replies from Twitter URLs
+2. **feature_request_tracker**: Save feature requests to database with this JSON format:
+   - features: array of feature objects with name, description, category, priority
+   - tweetUrl: original tweet URL
+   - targetAccount: account username  
+   - replies: array of reply objects with username and text
+
+**Feature Detection Examples:**
+- "dark mode" → UI feature, high priority
+- "responsive design" → UI feature, high priority  
+- "notifications" → Feature, medium priority
+- "search functionality" → Feature, medium priority
+- "mobile app" → Feature, high priority
+
+**Workflow for Twitter Analysis:**
+1. Get replies using twitter_replies_fetcher
+2. Analyze replies for feature requests
+3. If feature requests found → use feature_request_tracker to save them
+4. Provide user-friendly summary including saved features
 
 **Guidelines:**
 - Be conversational and helpful
+- Always track feature requests automatically
 - Provide context and insights, not just raw data
-- If a URL is invalid or no replies are found, explain this clearly
-- Suggest relevant follow-up questions or actions
+- Mention when features have been saved to the database
 - Keep responses engaging and informative
 
-**Example interactions:**
-- User: "What are people saying about https://x.com/user/status/123456?"
-- User: "Analyze the replies to this tweet: [URL]"
-- User: "Get me the top comments on this post"
-- User: "What's the sentiment of replies to this Twitter post?"
-
-Remember: Always use the tool when users ask about Twitter replies or provide Twitter URLs. Be proactive in offering insights and analysis.`;
+Remember: ALWAYS track feature requests when you find them in Twitter replies!`;
   }
 
   /**
@@ -143,7 +164,7 @@ Remember: Always use the tool when users ask about Twitter replies or provide Tw
         description: tool.description
       })),
       modelInfo: {
-        name: "gpt-3.5-turbo",
+        name: "gpt-4",
         provider: "OpenAI"
       }
     };

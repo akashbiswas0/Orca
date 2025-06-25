@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const twitterRoutes = require('./routes/twitter');
 const agentRoutes = require('./routes/agent');
+const featuresRoutes = require('./routes/features');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/twitter', twitterRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/features', featuresRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
