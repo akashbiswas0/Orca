@@ -6,11 +6,18 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "orchestrate": "node orchestration-startup.js",
+    "multi-agent": "node server.js",
+    "setup-db": "node scripts/setup-database.js",
+    "test-db": "node tests/test-database-connection.js",
+    "check-db": "node tests/test-table-structure.js",
     "test": "node tests/test-api.js && node tests/test-agent.js && node tests/test-features.js",
     "test:api": "node tests/test-api.js",
     "test:agent": "node tests/test-agent.js",
     "test:features": "node tests/test-features.js",
     "test:e2e": "node tests/test-end-to-end.js",
+    "test:chat": "node tests/test-orchestration-chat.js",
+    "test:example": "node tests/test-example-message.js",
     "demo": "node tests/demo.js"
   },
   "keywords": ["express", "twitter", "api", "rapidapi", "langchain", "agent"],

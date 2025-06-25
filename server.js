@@ -8,7 +8,10 @@ require('dotenv').config();
 const twitterRoutes = require('./routes/twitter');
 const agentRoutes = require('./routes/agent');
 const featuresRoutes = require('./routes/features');
+const orchestrationRoutes = require('./routes/orchestration');
+const orchestrationChatRoutes = require('./routes/orchestrationChat');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { initializeOrchestration } = require('./orchestration-startup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +33,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/twitter', twitterRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/features', featuresRoutes);
+app.use('/api/orchestration', orchestrationRoutes);
+app.use('/api/orchestration-chat', orchestrationChatRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -47,4 +52,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Initialize multi-agent architecture
+  initializeOrchestration();
 }); 
