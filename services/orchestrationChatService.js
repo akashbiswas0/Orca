@@ -13,9 +13,9 @@ class OrchestrationChatService {
    */
   async initialize() {
     try {
-      // Initialize GPT-4 model for chat
+      // Initialize GPT-4o-mini model for chat
       this.model = new ChatOpenAI({
-        modelName: "gpt-4",
+        modelName: "gpt-4o-mini",
         temperature: 0.3, // Slightly creative for natural conversation
         openAIApiKey: process.env.OPENAI_API_KEY,
       });

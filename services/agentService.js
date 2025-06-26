@@ -19,7 +19,7 @@ class TwitterAgent {
     try {
       // Initialize OpenAI model
       this.model = new ChatOpenAI({
-        modelName: "gpt-4",
+        modelName: "gpt-4o-mini",
         temperature: 0,
         openAIApiKey: process.env.OPENAI_API_KEY,
       });
@@ -164,7 +164,7 @@ Remember: ALWAYS track feature requests when you find them in Twitter replies!`;
         description: tool.description
       })),
       modelInfo: {
-        name: "gpt-4",
+        name: "gpt-4o-mini",
         provider: "OpenAI"
       }
     };
