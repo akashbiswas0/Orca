@@ -46,7 +46,7 @@ function makeRequest(data) {
     
     const options = {
       hostname: 'localhost',
-      port: 3000,
+      port: 3001,
       path: '/api/twitter/replies',
       method: 'POST',
       headers: {
@@ -92,7 +92,7 @@ async function healthCheck() {
     const result = await new Promise((resolve, reject) => {
       const req = http.request({
         hostname: 'localhost',
-        port: 3000,
+        port: 3001,
         path: '/health',
         method: 'GET'
       }, (res) => {

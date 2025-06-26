@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Test configuration
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:3001';
 const API_URL = `${BASE_URL}/api`;
 
 // Test data

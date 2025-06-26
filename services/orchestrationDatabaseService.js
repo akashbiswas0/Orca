@@ -62,7 +62,7 @@ class OrchestrationDatabaseService {
         url_type: urlData.type || 'twitter',
         title: urlData.title || '',
         description: urlData.description || '',
-        github_repo_id: urlData.githubRepoId || null,
+        github_repo: urlData.githubRepo || null,
         check_frequency_minutes: urlData.frequency || 60,
         priority: urlData.priority || 'medium',
         metadata: urlData.metadata || {}
@@ -103,32 +103,10 @@ class OrchestrationDatabaseService {
   async getUrlsToCheck() {
     if (!this.initialized) await this.initialize();
     
-    const currentTime = new Date();
-    
-    // First try with the join, fallback to simple query if relationship doesn't exist
-    let { data, error } = await this.supabase
+    const { data, error } = await this.supabase
       .from('monitored_urls')
-      .select(`
-        *,
-        github_repos (
-          repo_url,
-          repo_owner,
-          repo_name
-        )
-      `)
+      .select('*')
       .eq('status', 'active');
-
-    // If join fails due to relationship issues, try simple query
-    if (error && error.message.includes('relationship')) {
-      console.log('⚠️  Foreign key relationship not found, using simple query');
-      const simpleQuery = await this.supabase
-        .from('monitored_urls')
-        .select('*')
-        .eq('status', 'active');
-      
-      data = simpleQuery.data;
-      error = simpleQuery.error;
-    }
 
     if (error) throw error;
     return data || [];
@@ -319,6 +297,147 @@ class OrchestrationDatabaseService {
 
     if (error) throw error;
     return data || [];
+  }
+
+  /**
+   * Get requested feature requests that need implementation
+   */
+  async getRequestedFeatureRequests() {
+    if (!this.initialized) await this.initialize();
+    
+    const { data, error } = await this.supabase
+      .from('feature_requests')
+      .select('*')
+      .eq('status', 'requested')
+      .order('priority_order', { ascending: true }) // High priority first
+      .order('created_at', { ascending: true }); // Older requests first
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Update feature request status
+   */
+  async updateFeatureRequestStatus(featureId, status, metadata = {}) {
+    if (!this.initialized) await this.initialize();
+    
+    const updateData = {
+      status: status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add metadata based on status
+    if (status === 'pending') {
+      updateData.implementation_started_at = new Date().toISOString();
+      if (metadata.assignedTo) {
+        updateData.assigned_to = metadata.assignedTo;
+      }
+    }
+
+    if (status === 'shipped') {
+      updateData.implementation_completed_at = new Date().toISOString();
+      if (metadata.pullRequestUrl) {
+        updateData.pull_request_url = metadata.pullRequestUrl;
+      }
+      if (metadata.pullRequestNumber) {
+        updateData.pull_request_number = metadata.pullRequestNumber;
+      }
+    }
+
+    if (status === 'failed') {
+      updateData.implementation_failed_at = new Date().toISOString();
+      if (metadata.error) {
+        updateData.implementation_error = metadata.error;
+      }
+    }
+
+    // Store additional metadata
+    if (Object.keys(metadata).length > 0) {
+      updateData.implementation_metadata = metadata;
+    }
+
+    const { data, error } = await this.supabase
+      .from('feature_requests')
+      .update(updateData)
+      .eq('id', featureId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get pending feature requests (being implemented)
+   */
+  async getPendingFeatureRequests() {
+    if (!this.initialized) await this.initialize();
+    
+    const { data, error } = await this.supabase
+      .from('feature_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('implementation_started_at', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Log developer agent interaction
+   */
+  async logDeveloperAgentInteraction(interactionData) {
+    if (!this.initialized) await this.initialize();
+    
+    const { data, error } = await this.supabase
+      .from('developer_agent_logs')
+      .insert([{
+        feature_request_id: interactionData.featureRequestId,
+        action: interactionData.action, // 'send_request', 'receive_response', 'error'
+        message_sent: interactionData.messageSent || null,
+        response_received: interactionData.responseReceived || null,
+        status: interactionData.status, // 'success', 'error', 'timeout'
+        error_message: interactionData.error || null,
+        metadata: interactionData.metadata || {},
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('Failed to log developer agent interaction:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Create a new feature request (for testing)
+   */
+  async createFeatureRequest(featureData) {
+    if (!this.initialized) await this.initialize();
+    
+    const { data, error } = await this.supabase
+      .from('feature_requests')
+      .insert([{
+        feature_name: featureData.feature_name,
+        description: featureData.description,
+        category: featureData.category || 'feature',
+        priority: featureData.priority || 'medium',
+        status: 'requested',
+        requested_by_username: featureData.requested_by_username || 'test-user',
+        target_account: featureData.target_account || 'test-account',
+        tweet_url: featureData.tweet_url || 'https://x.com/test/status/123',
+        reply_text: featureData.reply_text || 'Test feature request',
+        github_repo: featureData.github_repo || null,
+        context_id: featureData.context_id || null
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }
 

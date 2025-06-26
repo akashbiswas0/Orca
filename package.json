@@ -20,24 +20,32 @@
     "test:example": "node tests/test-example-message.js",
     "demo": "node tests/demo.js"
   },
-  "keywords": ["express", "twitter", "api", "rapidapi", "langchain", "agent"],
+  "keywords": [
+    "express",
+    "twitter",
+    "api",
+    "rapidapi",
+    "langchain",
+    "agent"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
-    "dotenv": "^16.3.1",
-
-    "express-validator": "^7.0.1",
-    "langchain": "^0.0.212",
-    "@langchain/openai": "^0.0.14",
     "@langchain/core": "^0.1.17",
+    "@langchain/openai": "^0.0.14",
+    "@supabase/supabase-js": "^2.38.5",
     "axios": "^1.6.2",
-    "@supabase/supabase-js": "^2.38.5"
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "langchain": "^0.0.212",
+    "morgan": "^1.10.0",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
-} 
+}

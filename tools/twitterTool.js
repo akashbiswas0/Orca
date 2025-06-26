@@ -6,7 +6,7 @@ const axios = require('axios');
  * This tool allows the agent to fetch replies for Twitter/X posts
  */
 class TwitterRepliesTool extends Tool {
-  constructor(apiBaseUrl = 'http://localhost:3000') {
+  constructor(apiBaseUrl = 'http://localhost:3001') {
     super();
     this.name = "twitter_replies_fetcher";
     this.description = `Use this tool to fetch replies/comments for a Twitter or X post. 

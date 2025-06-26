@@ -221,7 +221,11 @@ class OrchestrationChatService {
     const deployments = [];
     
     try {
-      // Process GitHub repos
+      // Get the first GitHub repo URL for linking
+      const githubRepoUrl = extractedData.githubRepos.length > 0 ? 
+        extractedData.githubRepos[0].url : null;
+
+      // Process GitHub repos (still save them for reference)
       for (const repo of extractedData.githubRepos) {
         try {
           const savedRepo = await this.database.addGitHubRepo({
@@ -240,14 +244,15 @@ class OrchestrationChatService {
         }
       }
 
-      // Process URLs
+      // Process URLs and link them to GitHub repo
       for (const urlData of extractedData.urls) {
         try {
           const savedUrl = await this.database.addMonitoredUrl({
             url: urlData.url,
             type: urlData.type,
             title: `${urlData.type} URL added via chat`,
-            description: `Added by ${userId || 'user'} in session ${sessionId}`
+            description: `Added by ${userId || 'user'} in session ${sessionId}`,
+            githubRepo: githubRepoUrl // Store github repo URL directly
           });
           deployments.push({ type: 'url', data: savedUrl });
         } catch (error) {
@@ -287,6 +292,9 @@ class OrchestrationChatService {
           case 'url':
             responseText += `✅ URL: ${dep.data.url}`;
             if (dep.status === 'already_exists') responseText += ' (already being monitored)';
+            if (dep.data.github_repo) {
+              responseText += ` → linked to ${dep.data.github_repo}`;
+            }
             responseText += '\n';
             break;
           case 'deployment':
@@ -377,9 +385,34 @@ class OrchestrationChatService {
         responseText += `Found ${features.length} matching feature requests:\n\n`;
         
         features.slice(0, 5).forEach(feature => {
-          responseText += `• **${feature.name}** (${feature.priority} priority)\n`;
-          responseText += `  └─ Status: ${feature.status} | Category: ${feature.category}\n`;
-          responseText += `  └─ ${feature.description?.substring(0, 80)}...\n\n`;
+          responseText += `• **${feature.feature_name}** (${feature.priority} priority)\n`;
+          responseText += `  └─ Status: ${this.getStatusEmoji(feature.status)} ${feature.status}`;
+          
+          // Add implementation details
+          if (feature.status === 'pending' && feature.assigned_to) {
+            responseText += ` | Assigned to: ${feature.assigned_to}`;
+          }
+          if (feature.pull_request_url) {
+            responseText += ` | PR: ${feature.pull_request_url}`;
+          }
+          
+          responseText += ` | Category: ${feature.category}\n`;
+          responseText += `  └─ ${feature.description?.substring(0, 80)}...\n`;
+          
+          // Add timing information
+          if (feature.implementation_started_at) {
+            const startedAt = new Date(feature.implementation_started_at);
+            const now = new Date();
+            const minutesAgo = Math.round((now - startedAt) / (1000 * 60));
+            
+            if (feature.status === 'pending') {
+              responseText += `  └─ ⏱️ Implementation started ${minutesAgo} minutes ago\n`;
+            } else if (feature.status === 'shipped') {
+              responseText += `  └─ ✅ Shipped ${minutesAgo} minutes ago\n`;
+            }
+          }
+          
+          responseText += '\n';
         });
       } else {
         // Show statistics
@@ -393,21 +426,41 @@ class OrchestrationChatService {
           return acc;
         }, {});
         
+        // Count implementation stats
+        const implementationStats = features.reduce((acc, f) => {
+          if (f.status === 'shipped') acc.shipped++;
+          if (f.status === 'pending') acc.inProgress++;
+          if (f.status === 'failed') acc.failed++;
+          if (f.pull_request_url) acc.withPR++;
+          return acc;
+        }, { shipped: 0, inProgress: 0, failed: 0, withPR: 0 });
+        
         responseText += `**Total Features:** ${features.length}\n\n`;
+        
         responseText += "**By Status:**\n";
         Object.entries(statusCounts).forEach(([status, count]) => {
-          responseText += `• ${status}: ${count}\n`;
+          responseText += `• ${this.getStatusEmoji(status)} ${status}: ${count}\n`;
         });
         
         responseText += "\n**By Priority:**\n";
         Object.entries(priorityCounts).forEach(([priority, count]) => {
           responseText += `• ${priority}: ${count}\n`;
         });
+
+        responseText += "\n**Implementation Progress:**\n";
+        responseText += `• ✅ Shipped: ${implementationStats.shipped}\n`;
+        responseText += `• ⏳ In Progress: ${implementationStats.inProgress}\n`;
+        responseText += `• ❌ Failed: ${implementationStats.failed}\n`;
+        responseText += `• 🔗 With PRs: ${implementationStats.withPR}\n`;
       }
 
       return {
         text: responseText,
-        data: { features, keywords: extractedData.keywords }
+        data: { 
+          features, 
+          keywords: extractedData.keywords,
+          implementationEnabled: true
+        }
       };
     } catch (error) {
       return {
@@ -489,6 +542,20 @@ Just type naturally - I'll understand what you want to do!`,
   async getChatHistory(sessionId) {
     if (!this.initialized) await this.initialize();
     return await this.database.getChatHistory(sessionId);
+  }
+
+  /**
+   * Get status emoji for feature request status
+   */
+  getStatusEmoji(status) {
+    const statusEmojis = {
+      'requested': '📝',
+      'pending': '🔨',
+      'shipped': '✅',
+      'failed': '❌',
+      'rejected': '🚫'
+    };
+    return statusEmojis[status] || '❓';
   }
 }
 

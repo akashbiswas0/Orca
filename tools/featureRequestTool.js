@@ -71,6 +71,9 @@ class FeatureRequestTool extends Tool {
         return 'No features found to save.';
       }
 
+      // Look up the github_repo from monitored_urls table
+      const githubRepo = await this.getGithubRepoForUrl(tweetUrl);
+
       const savedFeatures = [];
       const errors = [];
 
@@ -89,7 +92,8 @@ class FeatureRequestTool extends Tool {
             tweet_url: tweetUrl,
             target_account: targetAccount,
             reply_text: requestingUser.text,
-            status: 'requested'
+            status: 'requested',
+            github_repo: githubRepo // Store the github repo URL
           };
 
           // Insert into Supabase (with upsert to handle duplicates)
@@ -121,6 +125,9 @@ class FeatureRequestTool extends Tool {
       
       if (savedFeatures.length > 0) {
         response += `✅ Successfully saved ${savedFeatures.length} feature request(s): ${savedFeatures.join(', ')}\n`;
+        if (githubRepo) {
+          response += `🔗 Linked to repository: ${githubRepo}\n`;
+        }
       }
       
       if (errors.length > 0) {
@@ -206,6 +213,29 @@ class FeatureRequestTool extends Tool {
     } catch (error) {
       console.error('Error fetching feature summary:', error);
       return [];
+    }
+  }
+
+  /**
+   * Look up github_repo from monitored_urls table based on tweet URL
+   */
+  async getGithubRepoForUrl(tweetUrl) {
+    try {
+      const { data, error } = await this.supabase
+        .from('monitored_urls')
+        .select('github_repo')
+        .eq('url', tweetUrl)
+        .single();
+
+      if (error || !data) {
+        console.log(`⚠️ No github_repo found for URL: ${tweetUrl}`);
+        return null;
+      }
+
+      return data.github_repo;
+    } catch (error) {
+      console.error('Error looking up github_repo:', error);
+      return null;
     }
   }
 }

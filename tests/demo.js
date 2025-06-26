@@ -73,7 +73,7 @@ function makeRequest(endpoint, method = 'GET', data = null) {
     
     const options = {
       hostname: 'localhost',
-      port: 3000,
+      port: 3001,
       path: endpoint,
       method: method,
       headers: {

@@ -10,7 +10,7 @@
 const axios = require('axios');
 
 // Demo configuration
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:3001';
 const API_URL = `${BASE_URL}/api`;
 
 console.log('🚀 Feature Request Tracking System Demo');
